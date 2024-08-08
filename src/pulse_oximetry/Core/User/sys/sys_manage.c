@@ -178,11 +178,15 @@ uint32_t sys_manage_start(bsp_tim_typedef_t *tim)
 uint32_t sys_manage_loop()
 {
   sys_button_manage();
+  uint32_t pre_time, pos_time = 0;
+  pre_time = HAL_GetTick();
   sys_measure_process_data(&s_ppg_signal);
   if (bsp_utils_get_tick() > 10000)
   {
     sys_display_update_heart_rate(&s_oled_screen, s_ppg_signal.heart_rate);
     sys_display_update_ppg_signal(&s_oled_screen, &(s_ppg_signal.filtered_data));
+    pos_time = HAL_GetTick() - pre_time;
+
   }
   if (cb_data_count(&s_rx_pkt_cbuf) > 0)
   {
@@ -272,12 +276,9 @@ uint32_t sys_manage_loop()
   case SYS_MANAGE_STATE_HEART_RATE_WARNING:
   {
     uint8_t msg[] = "Warning";
-    sys_display_show_noti(&s_oled_screen, msg);
-    drv_buzzer_play(&s_passive_buzzer, system_alert, 1);
     if ((s_ppg_signal.heart_rate > s_mng.lower_threshold) && (s_ppg_signal.heart_rate < s_mng.upper_threshold))
     {
       s_mng.current_state = SYS_MANAGE_STATE_NORMAL;
-      drv_buzzer_play(&s_passive_buzzer, system_alert, 0);
     }
     break;
   }
