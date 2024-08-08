@@ -83,9 +83,13 @@ uint32_t sys_measure_process_data(sys_measure_t *signal)
   __ASSERT(signal->dev.active == true, SYS_MEASURE_ERROR);
 
   sys_measure_filter_data(signal);
+  
+        uint32_t pre_time, pos_time;
   if (cb_space_count(&(signal->filtered_data)) == 0)
   {
+      pre_time = HAL_GetTick();
     sys_measure_peak_detector(signal);
+          pos_time = HAL_GetTick() - pre_time;
   }
 
   return SYS_MEASURE_OK;

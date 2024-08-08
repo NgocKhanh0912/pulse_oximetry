@@ -104,6 +104,7 @@ uint32_t sys_display_update_heart_rate(sys_display_t *display, uint8_t heart_rat
   __ASSERT((display != NULL), SYS_DISPLAY_OK);
   // Operation
   char heart_rate_update[4];
+
   uint8_t bytes = sprintf(heart_rate_update, "%03d", heart_rate);
   memcpy(s_heart_rate + 11, heart_rate_update, bytes);
   drv_ssd1306_set_cursor(&(display->screen),
@@ -113,7 +114,9 @@ uint32_t sys_display_update_heart_rate(sys_display_t *display, uint8_t heart_rat
                            s_heart_rate,
                            Font_6x8,
                            DRV_SSD1306_COLOR_WHITE);
+
   drv_ssd1306_update_screen(&(display->screen));
+
   // Return
   return SYS_DISPLAY_OK;
 }
