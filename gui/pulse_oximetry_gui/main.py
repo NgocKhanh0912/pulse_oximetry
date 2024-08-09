@@ -114,6 +114,7 @@ class MainWindow(QMainWindow):
     def toggle_serial_connection(self):
         if self.serial_connection:
             self.disconnect_serial()
+            QMessageBox.information(self, "Disconnection", "Serial port disconnected.")
         else:
             self.connect_serial()
 
@@ -121,18 +122,20 @@ class MainWindow(QMainWindow):
     def connect_serial(self):
         port = self.ui_user.cbb_com.currentText()
         baudrate = self.ui_user.cbb_baudrate.currentText()
-        if not port == "":
-            try:
-                self.serial_connection = serial_manage(port, baudrate)
-                self.serial_connection.packet.connect(self.process_serial_packet)
-                self.serial_connection.start()
-                self.ui_user.btn_connect_com.setText("Disconnect")
-                QMessageBox.information(self, "Connection", f"Connected to {port} at {baudrate} baudrate.")
-            except Exception:
-                self.update_available_ports()
-                QMessageBox.warning(self, "Error", "Serial port not found.")
-        else:
+
+        if port == "":
             QMessageBox.warning(self, "Error", "Serial port not found.")
+            return
+
+        try:
+            self.serial_connection = serial_manage(port, baudrate)
+            self.serial_connection.packet.connect(self.process_serial_packet)
+            self.serial_connection.start()
+            self.ui_user.btn_connect_com.setText("Disconnect")
+            QMessageBox.information(self, "Connection", f"Connected to {port} at {baudrate} baudrate.")
+        except Exception:
+            QMessageBox.warning(self, "Error", f"{port} is used by another software.")
+            self.disconnect_serial()
 
     @Slot()
     def disconnect_serial(self):
@@ -140,7 +143,6 @@ class MainWindow(QMainWindow):
             self.serial_connection.stop()
             self.serial_connection = None
             self.ui_user.btn_connect_com.setText("Connect")
-            QMessageBox.information(self, "Disconnection", "Serial port disconnected.")
 
     @Slot()
     def set_window_title(self, title):
