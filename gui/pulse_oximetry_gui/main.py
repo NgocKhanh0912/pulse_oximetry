@@ -45,6 +45,8 @@ class MainWindow(QMainWindow):
 
         # For scale the GUI based on screen size
         self.scale_ui_elements()
+        # Set the window to maximized
+        self.showMaximized()
 
         # Initialize serial communication
         self.ui_user.cbb_baudrate.setCurrentText("115200")
