@@ -181,11 +181,16 @@ uint32_t sys_manage_loop()
 
   sys_measure_process_data(&s_ppg_signal);
 
-  if (bsp_utils_get_tick() > 10000)
+  if (bsp_utils_get_tick() > 5000)
   {
-    // sys_display_update_heart_rate(&s_oled_screen, s_ppg_signal.heart_rate);
+    sys_display_update_heart_rate(&s_oled_screen, s_ppg_signal.heart_rate);
     sys_display_update_ppg_signal(&s_oled_screen, &(s_ppg_signal.filtered_data));
   }
+  else
+  {
+    cb_clear(&(s_ppg_signal.filtered_data));
+  }
+
   if (cb_data_count(&s_rx_pkt_cbuf) > 0)
   {
     cb_read(&s_rx_pkt_cbuf, &s_mng.cmd, CMD_PKT_SIZE);
@@ -351,12 +356,19 @@ uint32_t sys_manage_loop()
     uint8_t heart_rate = 0;
     uint8_t msg[] = "Sending";
     sys_display_show_noti(&s_oled_screen, msg);
-    uint32_t i;
-    static uint32_t records_sent = 0;
-    for (i = records_sent; i < (s_heart_rate_records.size - s_heart_rate_records.space_left); i += 5)
+    uint32_t ret = 0;
+    do
     {
-      sys_storage_export(&s_heart_rate_records, &time, 4);
-      sys_storage_export(&s_heart_rate_records, &heart_rate, 1);
+      ret = sys_storage_export(&s_heart_rate_records, &time, 4);
+      if (ret != SYS_STORAGE_OK)
+      {
+        break;
+      }
+      ret = sys_storage_export(&s_heart_rate_records, &heart_rate, 1);
+      if (ret != SYS_STORAGE_OK)
+      {
+        break;
+      }
       if ((s_ppg_signal.heart_rate < s_mng.upper_threshold) && (s_ppg_signal.heart_rate > s_mng.lower_threshold))
       {
         sys_protocol_pkt_t record_time = {SYS_MANAGE_CMD_TIME, time, 0xFF};
@@ -378,8 +390,8 @@ uint32_t sys_manage_loop()
         sys_protocol_send_pkt_to_port(record_time);
         sys_protocol_send_pkt_to_port(record_value);
       }
-    }
-    records_sent = records_sent + (i - 1) / 5;
+    } while (ret == SYS_STORAGE_OK);
+
     sprintf(msg, "          ");
     sys_display_show_noti(&s_oled_screen, msg);
     s_mng.current_state = SYS_MANAGE_STATE_NORMAL;

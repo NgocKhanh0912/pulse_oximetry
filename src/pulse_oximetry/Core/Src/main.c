@@ -59,7 +59,7 @@ DMA_HandleTypeDef hdma_usart2_rx;
 uint8_t display_buffer[1024];
 sys_display_t display;
 sys_measure_t ppg;
-double filtered_data[200];
+double filtered_data[129];
 uint32_t peak_nums;
 drv_buzzer_t buzzer;
 cbuffer_t cbuffer;
@@ -128,7 +128,7 @@ int main(void)
   sys_manage_start_display(&hi2c2, display_buffer);
   sys_manage_start_rtc(&hi2c2);
   sys_manage_start_measure(&hadc1, &htim2, PRESCALER_SAMPLING_RATE, AUTORELOAD_SAMPLING_RATE, filtered_data);
-  // sys_manage_start_storage();
+  sys_manage_start_storage();
   sys_manage_start_buzzer(&htim11, TIM_CHANNEL_1);
   sys_manage_start(&htim5);
   /* USER CODE END 2 */

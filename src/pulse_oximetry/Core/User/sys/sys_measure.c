@@ -21,7 +21,7 @@
 
 /* Private defines ---------------------------------------------------- */
 
-#define SYS_MEASURE_MAX_SAMPLES_PROCESS (200)
+#define SYS_MEASURE_MAX_SAMPLES_PROCESS (128)
 #define SYS_MEASURE_LPF_NUM_OF_COEFFS (5) // 4-order
 #define SYS_MEASURE_HPF_NUM_OF_COEFFS (3) // 2-order
 #define SYS_MEASURE_SAMPLING_RATE (100.0)
@@ -30,7 +30,7 @@
 /* Private macros ----------------------------------------------------- */
 
 /* Public variables --------------------------------------------------- */
-static uint16_t s_adc_val_buf[SYS_MEASURE_MAX_SAMPLES_PROCESS] = {0};
+static uint16_t s_adc_val_buf[SYS_MEASURE_MAX_SAMPLES_PROCESS + 1] = {0};
 
 /* Private variables -------------------------------------------------- */
 
@@ -203,7 +203,7 @@ static uint32_t sys_measure_peak_detector(sys_measure_t *signal)
   double mean_of_signal = 0;
   int i, j;
   double handle_data[SYS_MEASURE_MAX_SAMPLES_PROCESS] = {0};
-  cb_read(&(signal->filtered_data), handle_data, sizeof(handle_data));
+  memcpy(handle_data, signal->filtered_data.data, sizeof(handle_data));
 
   // Enhance the signal
   for (i = 0; i < SYS_MEASURE_MAX_SAMPLES_PROCESS; i++)
@@ -232,11 +232,12 @@ static uint32_t sys_measure_peak_detector(sys_measure_t *signal)
   }
 
   // Calculate the mean of signal
-  for (i = 0; i < SYS_MEASURE_MAX_SAMPLES_PROCESS; i++)
-  {
-    mean_of_signal += handle_data[i];
-  }
-  mean_of_signal /= SYS_MEASURE_MAX_SAMPLES_PROCESS;
+  // for (i = 0; i < SYS_MEASURE_MAX_SAMPLES_PROCESS; i++)
+  // {
+  //   mean_of_signal += handle_data[i];
+  // }
+  // mean_of_signal /= SYS_MEASURE_MAX_SAMPLES_PROCESS;
+  mean_of_signal = 240000;
 
   // Calculate the Threshold for generating Block of Interest
   double beta = 0.5;
@@ -309,8 +310,10 @@ static uint32_t sys_measure_peak_detector(sys_measure_t *signal)
   heart_rate_avg -= 0.0065;
   // Estimate the heart rate (beats per minute unit)
   heart_rate_avg = 60 / heart_rate_avg;
-  signal->heart_rate = (uint32_t)heart_rate_avg;
-
+  if (heart_rate_avg > 0)
+  {
+    signal->heart_rate = (uint32_t)heart_rate_avg;
+  }
   return SYS_MEASURE_OK;
 }
 /* End of file -------------------------------------------------------- */

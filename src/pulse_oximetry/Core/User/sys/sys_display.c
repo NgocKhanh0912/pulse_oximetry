@@ -108,13 +108,12 @@ uint32_t sys_display_update_heart_rate(sys_display_t *display, uint8_t heart_rat
   // Operation
   char heart_rate_update[4];
 
-  uint8_t bytes = sprintf(heart_rate_update, "%03d", heart_rate);
-  memcpy(s_heart_rate + 11, heart_rate_update, bytes);
+  sprintf(heart_rate_update, "%03d", heart_rate);
   drv_ssd1306_set_cursor(&(display->screen),
-                         0,
+                         Font_6x8.width * 11,
                          0);
   drv_ssd1306_write_string(&(display->screen),
-                           s_heart_rate,
+                           heart_rate_update,
                            Font_6x8,
                            DRV_SSD1306_COLOR_WHITE);
 
@@ -131,12 +130,12 @@ uint32_t sys_display_update_ppg_signal(sys_display_t *display, cbuffer_t *signal
   __ASSERT((signal_buf != NULL), SYS_DISPLAY_ERROR);
   // Operation
   // Read data
-  if (cb_data_count(signal_buf) < (((MAX_WIDTH + 1) / RATIO) * sizeof(double)))
+  if (cb_space_count(signal_buf) != 0)
   {
     return SYS_DISPLAY_FAILED;
   }
   double temp_buf[(MAX_WIDTH + 1) / RATIO] = {0};
-  cb_read(signal_buf, temp_buf, ((MAX_WIDTH + 1) / RATIO) * sizeof(double));
+  cb_read(signal_buf, temp_buf, sizeof(temp_buf));
   // Check if we have reached the width or not
   s_graph_pos_x = (s_graph_pos_x > (GRAPH_WIDTH - 2) ? 0 : s_graph_pos_x);
   if (s_graph_pos_x == 0)
