@@ -12,7 +12,7 @@ import sys
 import serial
 import serial.tools.list_ports
 import pyqtgraph as pg
-from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QMessageBox, QVBoxLayout
+from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QMessageBox, QVBoxLayout, QWidget
 from PySide6.QtCore import Slot, QTimer, QDateTime
 from dev_ui_manage import Widget
 from ui_form import Ui_User_UI
@@ -42,6 +42,9 @@ class MainWindow(QMainWindow):
 
         # Set the initial widget to user_ui
         self.stacked_widget.setCurrentWidget(self.user_ui)
+
+        # For scale the GUI based on screen size
+        self.scale_ui_elements()
 
         # Initialize serial communication
         self.ui_user.cbb_baudrate.setCurrentText("115200")
@@ -100,6 +103,59 @@ class MainWindow(QMainWindow):
         self.port_check_timer.timeout.connect(self.update_available_ports)
         self.port_check_timer.start(1000)  # Check every 1000 ms (1 second)
 
+    @Slot()
+    def scale_ui_elements(self):
+        base_width = 1536
+        base_height = 864
+
+        screen_size = self.screen().size()
+        screen_width = screen_size.width()
+        screen_height = screen_size.height()
+
+        print(f"Screen size: {screen_width}x{screen_height}")
+
+        scale_x = screen_width / base_width
+        scale_y = screen_height / base_height
+
+        print(f"Scale factors: x={scale_x}, y={scale_y}")
+
+        self.scale_widget(self.dev_widget, scale_x, scale_y)
+        self.scale_widget(self.ui_user.centralwidget, scale_x, scale_y)
+
+    @Slot()
+    def scale_widget(self, widget, scale_x, scale_y):
+        for child in widget.findChildren(QWidget):
+            if isinstance(child, QWidget):
+                geom = child.geometry()
+
+                child.setGeometry(
+                    int(geom.x() * scale_x),
+                    int(geom.y() * scale_y),
+                    int(geom.width() * scale_x),
+                    int(geom.height() * scale_y)
+                )
+
+                font = child.font()
+                font.setPointSize(int(font.pointSize() * scale_y))
+                child.setFont(font)
+
+                child.setContentsMargins(
+                    int(child.contentsMargins().left() * scale_x),
+                    int(child.contentsMargins().top() * scale_y),
+                    int(child.contentsMargins().right() * scale_x),
+                    int(child.contentsMargins().bottom() * scale_y)
+                )
+
+    @Slot()
+    def set_window_title(self, title):
+        self.setWindowTitle(title)
+
+    @Slot()
+    def show_dev_ui(self):
+        self.stacked_widget.setCurrentWidget(self.dev_widget)
+        self.set_window_title("Dev UI")
+
+    @Slot()
     def update_available_ports(self):
         # Update available COM ports
         available_ports = [port.device for port in serial.tools.list_ports.comports()]
@@ -143,15 +199,6 @@ class MainWindow(QMainWindow):
             self.serial_connection.stop()
             self.serial_connection = None
             self.ui_user.btn_connect_com.setText("Connect")
-
-    @Slot()
-    def set_window_title(self, title):
-        self.setWindowTitle(title)
-
-    @Slot()
-    def show_dev_ui(self):
-        self.stacked_widget.setCurrentWidget(self.dev_widget)
-        self.set_window_title("Dev UI")
 
     @Slot()
     def send_interval_code(self):
