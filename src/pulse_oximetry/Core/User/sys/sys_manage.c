@@ -183,10 +183,8 @@ uint32_t sys_manage_loop()
 
   if (bsp_utils_get_tick() > 10000)
   {
-    
     // sys_display_update_heart_rate(&s_oled_screen, s_ppg_signal.heart_rate);
     sys_display_update_ppg_signal(&s_oled_screen, &(s_ppg_signal.filtered_data));
-
   }
   if (cb_data_count(&s_rx_pkt_cbuf) > 0)
   {
@@ -222,7 +220,7 @@ uint32_t sys_manage_loop()
       s_mng.current_state = SYS_MANAGE_STATE_SET_INTERVAL;
       break;
     }
-    case SYS_MANAGE_CMD_SET_TIME:
+    case SYS_MANAGE_CMD_TIME:
     {
       // Check UART
       sys_protocol_send_pkt_to_port(s_check_pkt);
@@ -359,12 +357,27 @@ uint32_t sys_manage_loop()
     {
       sys_storage_export(&s_heart_rate_records, &time, 4);
       sys_storage_export(&s_heart_rate_records, &heart_rate, 1);
-
-      sys_protocol_pkt_t record_time = {SYS_MANAGE_CMD_SET_TIME, time, 0xFF};
-      sys_protocol_send_pkt_to_port(record_time);
-
-      sys_protocol_pkt_t record_value = {SYS_MANAGE_CMD_GET_RECORDS, heart_rate, 0xF0};
-      sys_protocol_send_pkt_to_port(record_value);
+      if ((s_ppg_signal.heart_rate < s_mng.upper_threshold) && (s_ppg_signal.heart_rate > s_mng.lower_threshold))
+      {
+        sys_protocol_pkt_t record_time = {SYS_MANAGE_CMD_TIME, time, 0xFF};
+        sys_protocol_pkt_t record_value = {SYS_MANAGE_CMD_GET_RECORDS, heart_rate, 0xFF};
+        sys_protocol_send_pkt_to_port(record_time);
+        sys_protocol_send_pkt_to_port(record_value);
+      }
+      else if (s_ppg_signal.heart_rate > s_mng.upper_threshold)
+      {
+        sys_protocol_pkt_t record_time = {SYS_MANAGE_CMD_TIME, time, 0x0F};
+        sys_protocol_pkt_t record_value = {SYS_MANAGE_CMD_GET_RECORDS, heart_rate, 0x0F};
+        sys_protocol_send_pkt_to_port(record_time);
+        sys_protocol_send_pkt_to_port(record_value);
+      }
+      else
+      {
+        sys_protocol_pkt_t record_time = {SYS_MANAGE_CMD_TIME, time, 0xF0};
+        sys_protocol_pkt_t record_value = {SYS_MANAGE_CMD_GET_RECORDS, heart_rate, 0xF0};
+        sys_protocol_send_pkt_to_port(record_time);
+        sys_protocol_send_pkt_to_port(record_value);
+      }
     }
     records_sent = records_sent + (i - 1) / 5;
     sprintf(msg, "          ");

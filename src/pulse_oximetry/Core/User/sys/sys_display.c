@@ -131,6 +131,10 @@ uint32_t sys_display_update_ppg_signal(sys_display_t *display, cbuffer_t *signal
   __ASSERT((signal_buf != NULL), SYS_DISPLAY_ERROR);
   // Operation
   // Read data
+  if (cb_data_count(signal_buf) < (((MAX_WIDTH + 1) / RATIO) * sizeof(double)))
+  {
+    return SYS_DISPLAY_FAILED;
+  }
   double temp_buf[(MAX_WIDTH + 1) / RATIO] = {0};
   cb_read(signal_buf, temp_buf, ((MAX_WIDTH + 1) / RATIO) * sizeof(double));
   // Check if we have reached the width or not
@@ -149,7 +153,7 @@ uint32_t sys_display_update_ppg_signal(sys_display_t *display, cbuffer_t *signal
   {
     s_graph_pos_y = (MAX_HEIGHT - 9 - 1) - (uint8_t)((temp_buf[i] + 750) / GRAPH_HEIGHT);
     // Check if overheight or not
-    s_graph_pos_y = ((s_graph_pos_y < GRAPH_HEIGHT) ? s_graph_pos_y : GRAPH_HEIGHT);
+    s_graph_pos_y = ((s_graph_pos_y < (BITMAP_HEIGHT + 1)) ? (BITMAP_HEIGHT + 1) : s_graph_pos_y);
     drv_ssd1306_draw_line(&display->screen,
                           s_graph_pos_x,
                           s_graph_pre_pos_y,
