@@ -399,6 +399,8 @@ class MainWindow(QMainWindow):
                 self.minute.clear()
                 self.second.clear()
                 self.records.clear()
+                self.heart_rate_time.clear()
+                self.heart_rate_value.clear()
                 self.ui_user.txt_record.clear()
             else:
                 QMessageBox.warning(self, "Error", "Serial port is not connected.")
@@ -479,6 +481,9 @@ class MainWindow(QMainWindow):
                 else:
                     time_in_hours = 0
 
+                if (len(self.heart_rate_time) == 0):
+                    self.heart_rate_time.append(0)
+
                 self.heart_rate_time.append(time_in_hours)
                 self.heart_rate_value.append(data_value)
 
@@ -516,12 +521,13 @@ class MainWindow(QMainWindow):
                 self.dev_widget.raw_ppg_time.append(raw_ppg_new_time)
                 self.dev_widget.raw_ppg_value.append(data_value)
 
-                # Keep only the last 20000 samples
-                if len(self.dev_widget.raw_ppg_time) > 20000:
-                    self.dev_widget.raw_ppg_time = self.dev_widget.raw_ppg_time[-20000:]
-                    self.dev_widget.raw_ppg_time = self.dev_widget.raw_ppg_time[-20000:]
+                # Keep only the last 500 samples
+                if len(self.dev_widget.raw_ppg_time) > 500:
+                    self.dev_widget.raw_ppg_time = self.dev_widget.raw_ppg_time[-500:]
+                    self.dev_widget.raw_ppg_time = self.dev_widget.raw_ppg_time[-500:]
 
                 self.dev_widget.raw_ppg_graph.plot(self.dev_widget.raw_ppg_time, self.dev_widget.raw_ppg_value, pen=self.dev_widget.raw_ppg_pen, clear=True)
+                self.dev_widget.raw_ppg_graph.autoRange()
 
             # Plot filtered PPG signal
             elif cmd == "21":
@@ -533,12 +539,13 @@ class MainWindow(QMainWindow):
                 self.dev_widget.filtered_ppg_time.append(filtered_ppg_new_time)
                 self.dev_widget.filtered_ppg_value.append(data_value)
 
-                # Keep only the last 20000 samples
-                if len(self.dev_widget.filtered_ppg_time) > 20000:
-                    self.dev_widget.filtered_ppg_time = self.dev_widget.filtered_ppg_time[-20000:]
-                    self.dev_widget.filtered_ppg_time = self.dev_widget.filtered_ppg_time[-20000:]
+                # Keep only the last 500 samples
+                if len(self.dev_widget.filtered_ppg_time) > 500:
+                    self.dev_widget.filtered_ppg_time = self.dev_widget.filtered_ppg_time[-500:]
+                    self.dev_widget.filtered_ppg_time = self.dev_widget.filtered_ppg_time[-500:]
 
                 self.dev_widget.filtered_ppg_graph.plot(self.dev_widget.filtered_ppg_time, self.dev_widget.filtered_ppg_value, pen=self.dev_widget.filtered_ppg_pen, clear=True)
+                self.dev_widget.filtered_ppg_graph.autoRange()
 
             # Error notification
             elif cmd == "06":
