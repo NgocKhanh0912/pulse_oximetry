@@ -64,7 +64,7 @@ class MainWindow(QMainWindow):
         self.ui_user.btn_set_threshold.clicked.connect(self.send_threshold_code)
         self.ui_user.btn_read_record.clicked.connect(self.send_read_record_code)
         self.ui_user.btn_clear_record.clicked.connect(self.send_clear_record_code)
-        self.ui_user.btn_clear_graph.clicked.connect(self.clear_graph)
+        self.ui_user.btn_clear_graph.clicked.connect(self.clear_heart_rate_graph)
         self.ui_user.btn_check_com.clicked.connect(self.send_check_com_code)
 
         # Add the heart rate plot to the layout in user.ui
@@ -383,8 +383,15 @@ class MainWindow(QMainWindow):
                 self.serial_connection.send(clear_record_command_bytes)
                 QMessageBox.information(self, "Success", f"Sent: {clear_record_hex_command}")
 
-                # Reset the self.records array
-                self.records = []
+                # Reset the arrays
+                self.dayofweek.clear()
+                self.day.clear()
+                self.month.clear()
+                self.year.clear()
+                self.hour.clear()
+                self.minute.clear()
+                self.second.clear()
+                self.records.clear()
                 self.ui_user.txt_record.clear()
             else:
                 QMessageBox.warning(self, "Error", "Serial port is not connected.")
@@ -393,9 +400,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "Serial port not connected.")
 
     @Slot()
-    def clear_graph(self):
-        self.heart_rate_time.clear()
-        self.heart_rate_value.clear()
+    def clear_heart_rate_graph(self):
         self.heart_rate_scatter.clear()
         self.heart_rate_graph.clear()
 
@@ -462,9 +467,20 @@ class MainWindow(QMainWindow):
 
             # Plot heart rate
             elif cmd == "01":
-                time_in_hours = self.hour[-1] + self.minute[-1] / 60 + self.second[-1] / 3600
+                if (len(self.hour) >= 1) and (len(self.minute) >= 1) and (len(self.second) >= 1):
+                    time_in_hours = self.hour[-1] + self.minute[-1] / 60 + self.second[-1] / 3600
+                else:
+                    time_in_hours = 0
+
                 self.heart_rate_time.append(time_in_hours)
                 self.heart_rate_value.append(data_value)
+
+                if (len(self.day) >= 2) and (len(self.month)) >= 2 and (len(self.year)) >= 2:
+                    if (self.day[-1] != self.day[-2]) or (self.month[-1] != self.month[-2]) or (self.year[-1] != self.year[-2]):
+                        self.clear_heart_rate_graph()
+                        # Clear old data
+                        self.heart_rate_time = self.heart_rate_time[-1:]
+                        self.heart_rate_value = self.heart_rate_value[-1:]
 
                 # Update the PlotDataItem
                 # self.heart_rate_plot_lines.setData(self.heart_rate_time, self.heart_rate_value)
@@ -473,7 +489,6 @@ class MainWindow(QMainWindow):
                 self.heart_rate_scatter.setData(self.heart_rate_time, self.heart_rate_value)
 
                 # Print the records from the arrays
-
                 record = f"{self.day[-1]:02}/{self.month[-1]:02}/{self.year[-1]:04} {self.hour[-1]:02}:{self.minute[-1]:02}:{self.second[-1]:02} Heart rate: {self.heart_rate_value[-1]} bpm"
                 self.records.append(record)
 
@@ -481,10 +496,13 @@ class MainWindow(QMainWindow):
                 records_text = "\n".join(self.records)
                 self.ui_user.txt_record.setPlainText(records_text)
 
+                heart_rate_graph_title = f"Heart Rate Graph in {self.day[-1]:02}/{self.month[-1]:02}/{self.year[-1]:04}"
+                self.heart_rate_graph.setTitle(heart_rate_graph_title, color="black", size="10pt")
+
             # Plot raw PPG signal
             elif cmd == "11":
-                if self.raw_ppg_time:
-                    raw_ppg_new_time = self.raw_ppg_time[-1] + 0.01
+                if self.dev_widget.raw_ppg_time:
+                    raw_ppg_new_time = self.dev_widget.raw_ppg_time[-1] + 0.01
                 else:
                     raw_ppg_new_time = 0
 
@@ -492,16 +510,16 @@ class MainWindow(QMainWindow):
                 self.dev_widget.raw_ppg_value.append(data_value)
 
                 # Keep only the last 20000 samples
-                if len(self.raw_ppg_time) > 20000:
-                    self.raw_ppg_time = self.raw_ppg_time[-20000:]
-                    self.raw_ppg_time = self.raw_ppg_time[-20000:]
+                if len(self.dev_widget.raw_ppg_time) > 20000:
+                    self.dev_widget.raw_ppg_time = self.dev_widget.raw_ppg_time[-20000:]
+                    self.dev_widget.raw_ppg_time = self.dev_widget.raw_ppg_time[-20000:]
 
                 self.dev_widget.raw_ppg_graph.plot(self.dev_widget.raw_ppg_time, self.dev_widget.raw_ppg_value, pen=self.dev_widget.raw_ppg_pen, clear=True)
 
             # Plot filtered PPG signal
             elif cmd == "21":
-                if self.filtered_ppg_time:
-                    filtered_ppg_new_time = self.filtered_ppg_time[-1] + 0.01
+                if self.dev_widget.filtered_ppg_time:
+                    filtered_ppg_new_time = self.dev_widget.filtered_ppg_time[-1] + 0.01
                 else:
                     filtered_ppg_new_time = 0
 
@@ -509,9 +527,9 @@ class MainWindow(QMainWindow):
                 self.dev_widget.filtered_ppg_value.append(data_value)
 
                 # Keep only the last 20000 samples
-                if len(self.filtered_ppg_time) > 20000:
-                    self.filtered_ppg_time = self.filtered_ppg_time[-20000:]
-                    self.filtered_ppg_time = self.filtered_ppg_time[-20000:]
+                if len(self.dev_widget.filtered_ppg_time) > 20000:
+                    self.dev_widget.filtered_ppg_time = self.dev_widget.filtered_ppg_time[-20000:]
+                    self.dev_widget.filtered_ppg_time = self.dev_widget.filtered_ppg_time[-20000:]
 
                 self.dev_widget.filtered_ppg_graph.plot(self.dev_widget.filtered_ppg_time, self.dev_widget.filtered_ppg_value, pen=self.dev_widget.filtered_ppg_pen, clear=True)
 

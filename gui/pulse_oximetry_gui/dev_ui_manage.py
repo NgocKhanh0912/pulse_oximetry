@@ -46,7 +46,7 @@ class Widget(QtWidgets.QWidget):
         self.raw_ppg_graph.setLabel("left", "PPG", **styles)
         self.raw_ppg_graph.setLabel("bottom", "Time (s)", **styles)
 
-        self.raw_ppg_pen = pg.mkPen(color=(255, 0, 0))  # Red
+        self.raw_ppg_pen = pg.mkPen(color=(0, 0, 255))  # Blue
         self.raw_ppg_value = []
         self.raw_ppg_time = []
 

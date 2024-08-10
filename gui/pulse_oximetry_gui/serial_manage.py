@@ -56,7 +56,7 @@ class serial_manage(QtCore.QObject):
                         if exit_outer_loop:
                             break
 
-                        while not self.temp_data[0] == 0x01:
+                        while self.temp_data[0] != 0x01:
                             self.temp_data = self.temp_data[1:]
                             if len(self.temp_data) == 0:
                                 exit_outer_loop = True
