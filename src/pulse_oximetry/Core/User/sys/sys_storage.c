@@ -133,7 +133,7 @@ uint32_t sys_storage_init(sys_storage_t *storage, uint32_t start_address, uint32
   __ASSERT(ret == BSP_FLASH_OK, SYS_STORAGE_FAILED);
 
   storage->size = size;
-  storage->space_left = size - SYS_STORAGE_ID_SIZE - 25;
+  storage->space_left = size - SYS_STORAGE_ID_SIZE;
   storage->pointer = SYS_STORAGE_FLASH_SECTOR_ADDRESS + SYS_STORAGE_ID_SIZE;
   return SYS_STORAGE_OK;
 }
@@ -211,6 +211,8 @@ uint32_t sys_storage_fully_clean(sys_storage_t *storage)
   ret = bsp_flash_write(storage->address, &storage->id, SYS_STORAGE_ID_SIZE);
   __ASSERT(ret == BSP_FLASH_OK, SYS_STORAGE_FAILED);
 
+  storage->space_left = storage->size - SYS_STORAGE_ID_SIZE;
+  storage->pointer = SYS_STORAGE_FLASH_SECTOR_ADDRESS + SYS_STORAGE_ID_SIZE;
   return SYS_STORAGE_OK;
 }
 
