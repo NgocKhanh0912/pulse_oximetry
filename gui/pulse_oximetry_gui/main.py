@@ -38,7 +38,7 @@ class MainWindow(QMainWindow):
         # Set the window title for the User UI window
         self.set_window_title("User UI")
         # Load icon
-        self.setWindowIcon(QIcon('D:/HK/Intern_ITR/06-2024-itr-intern-group-1/0_final_project/gui/pulse_oximetry_gui/dist/ice.ico'))
+        self.setWindowIcon(QIcon('ice.ico'))
 
         # Add the dev_widget (dev.ui) and user_ui (form.ui) to the stacked widget
         self.stacked_widget.addWidget(self.dev_widget)
@@ -121,6 +121,13 @@ class MainWindow(QMainWindow):
                     'font': font.pointSize() * (864/793),
                     'margins': (margins.left(), margins.top(), margins.right(), margins.bottom())
                 }
+
+                self.dev_widget.ui_dev.te_mode_12.setStyleSheet(
+                    "padding: 1px;"
+                )
+                self.dev_widget.ui_dev.te_mode_24.setStyleSheet(
+                    "padding: 1px;"
+                )
 
     @Slot()
     def reset_scale_element(self, widget):

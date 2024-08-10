@@ -18,11 +18,11 @@ class Widget(QtWidgets.QWidget):
         self.ui_dev.btn_switch_to_user_ui.clicked.connect(self.show_user_ui)
 
         # Connect the combobox to mode time changed method
-        self.ui_dev.cbb_mode_time.currentIndexChanged.connect(self.on_cbb_mode_time_changed)
+        self.ui_dev.cbb_mode_time.currentIndexChanged.connect(self.handle_cbb_mode_time_change)
 
         # Set default value for cbb_mode_time to "None"
         self.ui_dev.cbb_mode_time.setCurrentText("None")
-        self.on_cbb_mode_time_changed()  # Update UI elements according to default value
+        self.handle_cbb_mode_time_change()  # Update UI elements according to default value
 
         # Set default value for line_err_noti
         self.ui_dev.line_err_noti.setText("No error")
@@ -71,7 +71,7 @@ class Widget(QtWidgets.QWidget):
         self.main_window.set_window_title("User UI")
 
     @Slot()
-    def on_cbb_mode_time_changed(self):
+    def handle_cbb_mode_time_change(self):
         current_mode = self.ui_dev.cbb_mode_time.currentText()
         self.ui_dev.lbl_mode_time.setVisible(True)
         self.ui_dev.cbb_mode_time.setVisible(True)
