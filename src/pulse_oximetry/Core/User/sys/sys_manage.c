@@ -47,20 +47,12 @@ static const uint8_t s_success_noti[] = "Success!";
 /* Private function prototypes ---------------------------------------- */
 
 /**
- * @brief       Sleep down the system service.
+ * @brief       Control the ON/OFF state of the system service.
  *
  * @return
  * -  None
  */
-static void sys_manage_sleep();
-
-/**
- * @brief       Wake up the system service.
- *
- * @return
- * -  None
- */
-static void sys_manage_wakeup();
+static void sys_manage_pwr_ctrl();
 
 /**
  * @brief       Record the current heart rate.
@@ -69,6 +61,14 @@ static void sys_manage_wakeup();
  * -  None
  */
 static void sys_manage_record_heart_rate();
+
+/**
+ * @brief       Switch display signal on OLED or stream on GUI application.
+ *
+ * @return
+ * -  None
+ */
+static void sys_manage_select_stream();
 
 /**
  * @brief       Trigger the recording heart rate event
@@ -83,6 +83,8 @@ uint32_t sys_manage_start_display(bsp_i2c_handle_t *i2c, uint8_t *dev_buffer)
 {
   uint32_t ret = SYS_DISPLAY_OK;
   ret = sys_display_init(&s_oled_screen, i2c, dev_buffer);
+  __ASSERT(ret == SYS_DISPLAY_OK, SYS_MANAGE_ERROR);
+  ret = sys_display_show_noti(&s_oled_screen, s_success_noti);
   __ASSERT(ret == SYS_DISPLAY_OK, SYS_MANAGE_ERROR);
 
   return SYS_MANAGE_OK;
@@ -106,9 +108,9 @@ uint32_t sys_manage_start_button(GPIO_TypeDef *gpio, uint16_t pin, uint32_t butt
   uint32_t ret = SYS_BUTTON_OK;
   ret = sys_button_init(gpio, pin, button_active_level);
   __ASSERT(ret == SYS_BUTTON_OK, SYS_MANAGE_ERROR);
-  ret = sys_button_register_cb_function(sys_manage_wakeup,
-                                        sys_manage_sleep,
-                                        sys_manage_record_heart_rate);
+  ret = sys_button_register_cb_function(sys_manage_record_heart_rate,
+                                        sys_manage_select_stream,
+                                        sys_manage_pwr_ctrl);
   __ASSERT(ret == SYS_BUTTON_OK, SYS_MANAGE_ERROR);
   return SYS_MANAGE_OK;
 }
@@ -160,6 +162,8 @@ uint32_t sys_manage_start(bsp_tim_typedef_t *tim)
   s_mng.interval = 0;
   s_mng.lower_threshold = 60;
   s_mng.upper_threshold = 140;
+  s_mng.active = true;
+  s_mng.stream = SYS_MANAGE_STREAM_OLED;
   uint8_t threshold[] = {s_mng.lower_threshold, s_mng.upper_threshold};
   sys_display_update_threshold(&s_oled_screen, threshold);
 
@@ -181,14 +185,20 @@ uint32_t sys_manage_loop()
 
   sys_measure_process_data(&s_ppg_signal);
 
-  if (bsp_utils_get_tick() > 5000)
+  if ((bsp_utils_get_tick() > 5000) && (s_mng.stream == SYS_MANAGE_STREAM_OLED))
   {
     sys_display_update_heart_rate(&s_oled_screen, s_ppg_signal.heart_rate);
     sys_display_update_ppg_signal(&s_oled_screen, &(s_ppg_signal.filtered_data));
   }
   else
   {
-    cb_clear(&(s_ppg_signal.filtered_data));
+    while (cb_data_count(&(s_ppg_signal.filtered_data)) > 0)
+    {
+      double temp = 0;
+      cb_read(&(s_ppg_signal.filtered_data), &temp, sizeof(temp));
+      sys_protocol_pkt_t filtered_data_pkt = {SYS_MANAGE_CMD_GET_FILTERED_PPG, (uint32_t)temp + 500, 0xFF};
+      sys_protocol_send_pkt_to_port(filtered_data_pkt);
+    }
   }
 
   if (cb_data_count(&s_rx_pkt_cbuf) > 0)
@@ -414,16 +424,29 @@ uint32_t sys_manage_loop()
   }
 }
 /* Private definitions ------------------------------------------------ */
-static void sys_manage_sleep()
+static void sys_manage_select_stream()
 {
-  // Do something stuffs
-  s_mng.current_state = SYS_MAMAGE_STATE_SLEEP;
+  if (s_mng.stream == SYS_MANAGE_STREAM_OLED)
+  {
+    s_mng.stream = SYS_MANAGE_STREAM_GUI;
+  }
+  else
+  {
+    s_mng.stream = SYS_MANAGE_STREAM_OLED;
+  }
 }
 
-static void sys_manage_wakeup()
+static void sys_manage_pwr_ctrl()
 {
-  // Do something stuffs
-  s_mng.current_state = SYS_MANAGE_STATE_IDLE;
+  s_mng.active ^= 1;
+  if (s_mng.active)
+  {
+    s_mng.current_state = SYS_MANAGE_STATE_IDLE;
+  }
+  else
+  {
+    s_mng.current_state = SYS_MAMAGE_STATE_SLEEP;
+  }
 }
 
 static void sys_manage_record_heart_rate()
