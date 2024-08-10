@@ -51,6 +51,12 @@ typedef enum
 
 typedef enum
 {
+  SYS_MANAGE_STREAM_OLED = 0,
+  SYS_MANAGE_STREAM_GUI
+} sys_manage_stream_select_t;
+
+typedef enum
+{
   SYS_MAMAGE_STATE_SLEEP = 0,
   SYS_MANAGE_WAIT_WAKEUP,
   SYS_MANAGE_STATE_IDLE,
@@ -70,7 +76,9 @@ typedef enum
 typedef struct
 {
   sys_manage_state_t current_state;
+  bool active;
   uint8_t cmd;
+  sys_manage_stream_select_t stream;
   uint32_t interval;
   uint8_t lower_threshold;
   uint8_t upper_threshold;
