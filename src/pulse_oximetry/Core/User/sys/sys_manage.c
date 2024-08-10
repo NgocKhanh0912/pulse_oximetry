@@ -23,6 +23,8 @@
 #define SYS_MANAGE_TIMESTAMP (96000000U)
 
 #define SYS_MANAGE_SEGMENT_HEART_RATE_RECORDS_SIZE (4096U)
+
+#define SYS_MANAGE_FILTERED_DATA_OFFSET_PKT (1000.0)
 /* Private enumerate/structure ---------------------------------------- */
 
 /* Private macros ----------------------------------------------------- */
@@ -163,7 +165,7 @@ uint32_t sys_manage_start(bsp_tim_typedef_t *tim)
   s_mng.lower_threshold = 60;
   s_mng.upper_threshold = 140;
   s_mng.active = true;
-  s_mng.stream = SYS_MANAGE_STREAM_OLED;
+  s_mng.stream = SYS_MANAGE_STREAM_GUI;
   uint8_t threshold[] = {s_mng.lower_threshold, s_mng.upper_threshold};
   sys_display_update_threshold(&s_oled_screen, threshold);
 
@@ -196,7 +198,8 @@ uint32_t sys_manage_loop()
     {
       double temp = 0;
       cb_read(&(s_ppg_signal.filtered_data), &temp, sizeof(temp));
-      sys_protocol_pkt_t filtered_data_pkt = {SYS_MANAGE_CMD_GET_FILTERED_PPG, (uint32_t)temp + 500, 0xFF};
+      temp += SYS_MANAGE_FILTERED_DATA_OFFSET_PKT;
+      sys_protocol_pkt_t filtered_data_pkt = {SYS_MANAGE_CMD_GET_FILTERED_PPG, (uint32_t)temp, 0xFF};
       sys_protocol_send_pkt_to_port(filtered_data_pkt);
     }
   }
