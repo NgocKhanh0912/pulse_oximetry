@@ -13,6 +13,7 @@ import serial
 import serial.tools.list_ports
 import pyqtgraph as pg
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QMessageBox, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QPushButton, QGroupBox, QCalendarWidget, QTimeEdit, QLineEdit, QTextEdit
 from PySide6.QtCore import Slot, QTimer, QDateTime
 from dev_ui_manage import Widget
 from ui_form import Ui_User_UI
@@ -43,8 +44,8 @@ class MainWindow(QMainWindow):
         # Set the initial widget to user_ui
         self.stacked_widget.setCurrentWidget(self.user_ui)
 
-        # For scale the GUI based on screen size
-        self.scale_ui_elements()
+        self.base_info = {}
+        self.store_base_info(self)
         # Set the window to maximized
         self.showMaximized()
 
@@ -105,48 +106,104 @@ class MainWindow(QMainWindow):
         self.port_check_timer.timeout.connect(self.update_available_ports)
         self.port_check_timer.start(1000)  # Check every 1000 ms (1 second)
 
+    def store_base_info(self, widget):
+        for child in widget.findChildren(QWidget):
+            if isinstance(child, QWidget):
+                geom = child.geometry()
+                font = child.font()
+                margins = child.contentsMargins()
+
+                self.base_info[child] = {
+                    'geometry': (geom.x(), geom.y(), geom.width(), geom.height()),
+                    'font': font.pointSize() * (864/793),
+                    'margins': (margins.left(), margins.top(), margins.right(), margins.bottom())
+                }
+
     @Slot()
-    def scale_ui_elements(self):
+    def reset_scale_element(self, widget):
+        for child in widget.findChildren(QWidget):
+            if isinstance(child, QWidget) and child in self.base_info:
+                base_info = self.base_info[child]
+
+                geom = base_info['geometry']
+                font_size = base_info['font']
+                margins = base_info['margins']
+
+                child.setGeometry(
+                    geom[0],
+                    geom[1],
+                    geom[2],
+                    geom[3]
+                )
+
+                font = child.font()
+                font.setPointSize(font_size)
+                child.setFont(font)
+
+                child.setContentsMargins(
+                    margins[0],
+                    margins[1],
+                    margins[2],
+                    margins[3]
+                )
+
+                if isinstance(child, (QPushButton, QGroupBox, QCalendarWidget, QTimeEdit, QLineEdit, QTextEdit)):
+                    style_sheet = f"font-size: {font_size}px;"
+                    child.setStyleSheet(style_sheet)
+
+    @Slot()
+    def resizeEvent(self, event):
+        self.reset_scale_element(self.dev_widget)
+        self.reset_scale_element(self.ui_user.centralwidget)
+        self.scale_ui_elements(self.screen().size())
+        self.scale_ui_elements(self.size())
+        super().resizeEvent(event)
+
+    @Slot()
+    def scale_ui_elements(self, size):
         base_width = 1536
         base_height = 864
 
-        screen_size = self.screen().size()
-        screen_width = screen_size.width()
-        screen_height = screen_size.height()
-
-        print(f"Screen size: {screen_width}x{screen_height}")
+        screen_width = size.width()
+        screen_height = size.height() * (864/793)
 
         scale_x = screen_width / base_width
         scale_y = screen_height / base_height
-
-        print(f"Scale factors: x={scale_x}, y={scale_y}")
 
         self.scale_widget(self.dev_widget, scale_x, scale_y)
         self.scale_widget(self.ui_user.centralwidget, scale_x, scale_y)
 
     @Slot()
-    def scale_widget(self, widget, scale_x, scale_y):
+    def scale_widget(self, widget, scale_x, scale_y):    
         for child in widget.findChildren(QWidget):
-            if isinstance(child, QWidget):
-                geom = child.geometry()
+            if isinstance(child, QWidget) and child in self.base_info:
+                base_info = self.base_info[child]
+
+                geom = base_info['geometry']
+                font_size = base_info['font']
+                margins = base_info['margins']
 
                 child.setGeometry(
-                    int(geom.x() * scale_x),
-                    int(geom.y() * scale_y),
-                    int(geom.width() * scale_x),
-                    int(geom.height() * scale_y)
+                    geom[0] * scale_x,
+                    geom[1] * scale_y,
+                    geom[2] * scale_x,
+                    geom[3] * scale_y
                 )
 
                 font = child.font()
-                font.setPointSize(int(font.pointSize() * scale_y))
+                font.setPointSize(font_size * scale_y)
                 child.setFont(font)
 
                 child.setContentsMargins(
-                    int(child.contentsMargins().left() * scale_x),
-                    int(child.contentsMargins().top() * scale_y),
-                    int(child.contentsMargins().right() * scale_x),
-                    int(child.contentsMargins().bottom() * scale_y)
+                    margins[0] * scale_x,
+                    margins[1] * scale_y,
+                    margins[2] * scale_x,
+                    margins[3] * scale_y
                 )
+
+                if isinstance(child, (QPushButton, QGroupBox, QCalendarWidget, QTimeEdit, QLineEdit, QTextEdit)):
+                    style_sheet = f"font-size: {font_size}px;"
+                    child.setStyleSheet(style_sheet)
 
     @Slot()
     def set_window_title(self, title):
@@ -188,12 +245,13 @@ class MainWindow(QMainWindow):
         try:
             self.serial_connection = serial_manage(port, baudrate)
             self.serial_connection.packet.connect(self.process_serial_packet)
+            self.serial_connection.error_message.connect(self.send_error_mess)
             self.serial_connection.start()
             self.ui_user.btn_connect_com.setText("Disconnect")
             QMessageBox.information(self, "Connection", f"Connected to {port} at {baudrate} baudrate.")
         except Exception:
-            QMessageBox.warning(self, "Error", f"{port} is used by another software.")
             self.disconnect_serial()
+            QMessageBox.warning(self, "Error", f"{port} is used by another software.")
 
     @Slot()
     def disconnect_serial(self):
@@ -351,6 +409,11 @@ class MainWindow(QMainWindow):
         # ScatterPlotItem for scatter points
         self.heart_rate_scatter = pg.ScatterPlotItem(size=10, pen=None, brush=(255, 0, 0))
         self.heart_rate_graph.addItem(self.heart_rate_scatter)
+
+    @Slot(str)
+    def send_error_mess(self, error_message):
+        self.disconnect_serial()
+        QMessageBox.warning(self, "Error", f"{error_message}")
 
     @Slot(bytes)
     def process_serial_packet(self, packet):
