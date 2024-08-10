@@ -365,21 +365,16 @@ class MainWindow(QMainWindow):
                 return
 
             cmd = packet[2:4]
-
-            # data_temp = packet[4:12]
-            # data = data_temp[::-1]
-
-            data = packet[4:12]
+            data_reverse = packet[4:12]
+            data = ''.join(reversed([data_reverse[i:i+2] for i in range(0, len(data_reverse), 2)]))
+            data_value = int(data, 16)
             threshold = packet[12:14]
-
-            for index, value in enumerate(data):
-                print(f"Index rv: {index}, Value rv: {value}")
 
             if not (threshold in ["FF", "0F", "F0"]):
                 QMessageBox.warning(self, "Error", "Invalid threshold byte")
                 return
 
-            if not (cmd in ["00", "01", "04", "06"]):
+            if not (cmd in ["00", "01", "11", "21", "04", "06"]):
                 QMessageBox.warning(self, "Error", "Invalid command")
                 return
 
@@ -390,6 +385,7 @@ class MainWindow(QMainWindow):
             elif threshold == "FF":
                 self.ui_user.line_thre_noti.setText("Normal heart rate")
 
+            # Check UART
             if cmd == "00":
                 if data == "FFFFFFFF":
                     QMessageBox.information(self, "Success", "UART OK")
@@ -397,59 +393,69 @@ class MainWindow(QMainWindow):
                 else:
                     QMessageBox.warning(self, "Error", "Invalid data")
                     return
+
+            # Plot heart rate
+            elif cmd == "01":
+                time_in_hours = self.hour[-1] + self.minute[-1] / 60 + self.second[-1] / 3600
+                self.heart_rate_time.append(time_in_hours)
+                self.heart_rate_value.append(data_value)
+
+                # Update the PlotDataItem
+                # self.heart_rate_plot_lines.setData(self.heart_rate_time, self.heart_rate_value)
+
+                # Update the ScatterPlotItem
+                self.heart_rate_scatter.setData(self.heart_rate_time, self.heart_rate_value)
+
+                # Print the records from the arrays
+
+                record = f"{self.day[-1]:02}/{self.month[-1]:02}/{self.year[-1]:04} {self.hour[-1]:02}:{self.minute[-1]:02}:{self.second[-1]:02} Heart rate: {self.heart_rate_value[-1]} bpm"
+                self.records.append(record)
+
+                # Join records with newline characters and print to txt_record
+                records_text = "\n".join(self.records)
+                self.ui_user.txt_record.setPlainText(records_text)
+
+            # Plot raw PPG signal
+            elif cmd == "11":
+                if self.raw_ppg_time:
+                    raw_ppg_new_time = self.raw_ppg_time[-1] + 0.01
+                else:
+                    raw_ppg_new_time = 0
+
+                self.dev_widget.raw_ppg_time.append(raw_ppg_new_time)
+                self.dev_widget.raw_ppg_value.append(data_value)
+
+                # Keep only the last 20000 samples
+                if len(self.raw_ppg_time) > 20000:
+                    self.raw_ppg_time = self.raw_ppg_time[-20000:]
+                    self.raw_ppg_time = self.raw_ppg_time[-20000:]
+
+                self.dev_widget.raw_ppg_graph.plot(self.dev_widget.raw_ppg_time, self.dev_widget.raw_ppg_value, pen=self.dev_widget.raw_ppg_pen, clear=True)
+
+            # Plot filtered PPG signal
+            elif cmd == "21":
+                if self.filtered_ppg_time:
+                    filtered_ppg_new_time = self.filtered_ppg_time[-1] + 0.01
+                else:
+                    filtered_ppg_new_time = 0
+
+                self.dev_widget.filtered_ppg_time.append(filtered_ppg_new_time)
+                self.dev_widget.filtered_ppg_value.append(data_value)
+
+                # Keep only the last 20000 samples
+                if len(self.filtered_ppg_time) > 20000:
+                    self.filtered_ppg_time = self.filtered_ppg_time[-20000:]
+                    self.filtered_ppg_time = self.filtered_ppg_time[-20000:]
+
+                self.dev_widget.filtered_ppg_graph.plot(self.dev_widget.filtered_ppg_time, self.dev_widget.filtered_ppg_value, pen=self.dev_widget.filtered_ppg_pen, clear=True)
+
+            # Error notification
             elif cmd == "06":
                 if data == "FFFFFFFF":
                     self.dev_widget.ui_dev.line_err_noti.setText("Error occurred")
                 else:
                     QMessageBox.warning(self, "Error", "Invalid data")
                     return
-            elif cmd == "01":
-                data_type = data[7:8]
-
-                if not (data_type in ["0", "1", "2"]):
-                    QMessageBox.warning(self, "Error", "Invalid data type")
-                    return
-
-                #plot heart rate
-                if data_type == "0":
-                    data_value = int(data[0:8], 16)
-
-                    time_in_hours = self.hour[-1] + self.minute[-1] / 60 + self.second[-1] / 3600
-                    self.heart_rate_time.append(time_in_hours)
-                    self.heart_rate_value.append(data_value)
-
-                    # Update the PlotDataItem
-                    # self.heart_rate_plot_lines.setData(self.heart_rate_time, self.heart_rate_value)
-
-                    # Update the ScatterPlotItem
-                    self.heart_rate_scatter.setData(self.heart_rate_time, self.heart_rate_value)
-
-                    # Print the records from the arrays
-
-                    record = f"{self.day[-1]:02}/{self.month[-1]:02}/{self.year[-1]:04} {self.hour[-1]:02}:{self.minute[-1]:02}:{self.second[-1]:02} Heart rate: {self.heart_rate_value[-1]} bpm"
-                    self.records.append(record)
-
-                    # Join records with newline characters and print to txt_record
-                    records_text = "\n".join(self.records)
-                    self.ui_user.txt_record.setPlainText(records_text)
-
-                #plot filtered ppg signal
-                elif data_type == "1":
-                    data_value = int(data[0:7], 16)
-                    time_in_hours = self.hour[-1] + self.minute[-1] / 60 + self.second[-1] / 3600
-
-                    self.dev_widget.filtered_ppg_time.append(time_in_hours)
-                    self.dev_widget.filtered_ppg_value.append(data_value)
-                    self.dev_widget.filtered_ppg_graph.plot(self.dev_widget.filtered_ppg_time, self.dev_widget.filtered_ppg_value, pen=self.dev_widget.filtered_ppg_pen, clear=True)
-                
-                #plot raw ppg signal
-                elif data_type == "2":
-                    data_value = int(data[0:7], 16)
-                    time_in_hours = self.hour[-1] + self.minute[-1] / 60 + self.second[-1] / 3600
-
-                    self.dev_widget.raw_ppg_time.append(time_in_hours)
-                    self.dev_widget.raw_ppg_value.append(data_value)
-                    self.dev_widget.raw_ppg_graph.plot(self.dev_widget.raw_ppg_time, self.dev_widget.raw_ppg_value, pen=self.dev_widget.raw_ppg_pen, clear=True)
 
             # Get epoch time from STM32, convert epoch time to date time for print record            
             elif cmd == "04":

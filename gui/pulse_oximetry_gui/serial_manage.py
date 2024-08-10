@@ -33,14 +33,47 @@ class serial_manage(QtCore.QObject):
 
     def run(self):
         while self.running:
-            if self.serial_connection.in_waiting > 8:
-                data = self.serial_connection.read(8)
+            if self.serial_connection.in_waiting > 0:
+                data = self.serial_connection.read(self.serial_connection.in_waiting)
                 self.temp_data.extend(data)
-                if self.temp_data[0] == 0x01 and self.temp_data[7] == 0x04:
-                    self.packet.emit(self.temp_data[:8])
-                    self.temp_data = self.temp_data[8:]
-                else:
-                    self.temp_data = self.temp_data[1:]
+                exit_outer_loop = False
+
+                while len(self.temp_data) > 0:
+                    while self.temp_data[0] == 0x01:
+                        if len(self.temp_data) < 8:
+                            exit_outer_loop = True
+                            break
+                        if self.temp_data[7] == 0x04:
+                            self.packet.emit(self.temp_data[:8])
+                            self.temp_data = self.temp_data[8:]
+                        else:
+                            self.temp_data = self.temp_data[1:]
+                        if len(self.temp_data) == 0:
+                            exit_outer_loop = True
+                            break
+                    if exit_outer_loop:
+                        break
+
+                    while not self.temp_data[0] == 0x01:
+                        self.temp_data = self.temp_data[1:]
+                        if len(self.temp_data) == 0:
+                            exit_outer_loop = True
+                            break
+                        if self.temp_data[0] == 0x01:
+                            if len(self.temp_data) < 8:
+                                exit_outer_loop = True
+                                break
+                            if self.temp_data[7] == 0x04:
+                                self.packet.emit(self.temp_data[:8])
+                                self.temp_data = self.temp_data[8:]
+                            else:
+                                self.temp_data = self.temp_data[1:]
+                            if len(self.temp_data) == 0:
+                                exit_outer_loop = True
+                                break
+                    if exit_outer_loop:
+                        break
+
 
     def send(self, command_bytes):
         if self.serial_connection and self.serial_connection.is_open:
