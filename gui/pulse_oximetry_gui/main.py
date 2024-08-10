@@ -15,6 +15,7 @@ import pyqtgraph as pg
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QMessageBox, QVBoxLayout, QWidget
 from PySide6.QtWidgets import QPushButton, QGroupBox, QCalendarWidget, QTimeEdit, QLineEdit, QTextEdit
 from PySide6.QtCore import Slot, QTimer, QDateTime
+from PySide6.QtGui import QIcon
 from dev_ui_manage import Widget
 from ui_form import Ui_User_UI
 from serial_manage import serial_manage
@@ -36,6 +37,8 @@ class MainWindow(QMainWindow):
 
         # Set the window title for the User UI window
         self.set_window_title("User UI")
+        # Load icon
+        self.setWindowIcon(QIcon('D:/HK/Intern_ITR/06-2024-itr-intern-group-1/0_final_project/gui/pulse_oximetry_gui/dist/ice.ico'))
 
         # Add the dev_widget (dev.ui) and user_ui (form.ui) to the stacked widget
         self.stacked_widget.addWidget(self.dev_widget)
