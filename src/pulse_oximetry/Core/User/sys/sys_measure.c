@@ -203,7 +203,8 @@ static uint32_t sys_measure_peak_detector(sys_measure_t *signal)
   double mean_of_signal = 0;
   int i, j;
   double handle_data[SYS_MEASURE_MAX_SAMPLES_PROCESS] = {0};
-  memcpy(handle_data, signal->filtered_data.data, sizeof(handle_data));
+  cbuffer_t peak_cbuf = signal->filtered_data;
+  cb_read(&peak_cbuf, handle_data, sizeof(handle_data));
 
   // Enhance the signal
   for (i = 0; i < SYS_MEASURE_MAX_SAMPLES_PROCESS; i++)
@@ -232,15 +233,14 @@ static uint32_t sys_measure_peak_detector(sys_measure_t *signal)
   }
 
   // Calculate the mean of signal
-  // for (i = 0; i < SYS_MEASURE_MAX_SAMPLES_PROCESS; i++)
-  // {
-  //   mean_of_signal += handle_data[i];
-  // }
-  // mean_of_signal /= SYS_MEASURE_MAX_SAMPLES_PROCESS;
-  mean_of_signal = 240000;
+  for (i = 0; i < SYS_MEASURE_MAX_SAMPLES_PROCESS; i++)
+  {
+    mean_of_signal += handle_data[i];
+  }
+  mean_of_signal /= SYS_MEASURE_MAX_SAMPLES_PROCESS;
 
   // Calculate the Threshold for generating Block of Interest
-  double beta = 0.5;
+  double beta = 0.8;
   double threshold[SYS_MEASURE_MAX_SAMPLES_PROCESS] = {0};
 
   for (i = 0; i < SYS_MEASURE_MAX_SAMPLES_PROCESS; i++)
