@@ -517,9 +517,6 @@ class MainWindow(QMainWindow):
         else:
             time_in_hours = 0
 
-        if (len(self.heart_rate_time) == 0):
-            self.heart_rate_time.append(0)
-
         self.heart_rate_time.append(time_in_hours)
         self.heart_rate_value.append(data_value)
 
