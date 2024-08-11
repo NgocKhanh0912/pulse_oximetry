@@ -165,7 +165,7 @@ uint32_t sys_manage_start(bsp_tim_typedef_t *tim)
   s_mng.lower_threshold = 60;
   s_mng.upper_threshold = 140;
   s_mng.active = true;
-  s_mng.stream = SYS_MANAGE_STREAM_GUI;
+  s_mng.stream = SYS_MANAGE_STREAM_OLED;
   uint8_t threshold[] = {s_mng.lower_threshold, s_mng.upper_threshold};
   sys_display_update_threshold(&s_oled_screen, threshold);
 
@@ -185,6 +185,21 @@ uint32_t sys_manage_loop()
 {
   sys_button_manage();
 
+  if (s_mng.stream == SYS_MANAGE_STREAM_GUI)
+  {
+    if (cb_data_count(&s_ppg_signal.dev.adc_conv) > 0)
+    {
+      cbuffer_t raw_data_cbuf = s_ppg_signal.dev.adc_conv;
+      while (cb_data_count(&raw_data_cbuf) > 0)
+      {
+        uint16_t adc_val = 0;
+        cb_read(&raw_data_cbuf, &adc_val, sizeof(adc_val));
+        sys_protocol_pkt_t raw_data_pkt = {SYS_MANAGE_CMD_GET_RAW_PPG, (uint32_t)adc_val, 0xFF};
+        sys_protocol_send_pkt_to_port(raw_data_pkt);
+      }
+    }
+  }
+
   sys_measure_process_data(&s_ppg_signal);
 
   if ((bsp_utils_get_tick() > 5000) && (s_mng.stream == SYS_MANAGE_STREAM_OLED))
@@ -192,16 +207,25 @@ uint32_t sys_manage_loop()
     sys_display_update_heart_rate(&s_oled_screen, s_ppg_signal.heart_rate);
     sys_display_update_ppg_signal(&s_oled_screen, &(s_ppg_signal.filtered_data));
   }
-  else
+  else if (s_mng.stream == SYS_MANAGE_STREAM_GUI)
   {
-    while (cb_data_count(&(s_ppg_signal.filtered_data)) > 0)
+
+    if (cb_data_count(&s_ppg_signal.filtered_data) > 0)
     {
-      double temp = 0;
-      cb_read(&(s_ppg_signal.filtered_data), &temp, sizeof(temp));
-      temp += SYS_MANAGE_FILTERED_DATA_OFFSET_PKT;
-      sys_protocol_pkt_t filtered_data_pkt = {SYS_MANAGE_CMD_GET_FILTERED_PPG, (uint32_t)temp, 0xFF};
-      sys_protocol_send_pkt_to_port(filtered_data_pkt);
+      cbuffer_t filtered_data_cbuf = s_ppg_signal.filtered_data;
+      while (cb_data_count(&filtered_data_cbuf) > 0)
+      {
+        double temp = 0;
+        cb_read(&(filtered_data_cbuf), &temp, sizeof(temp));
+        temp += SYS_MANAGE_FILTERED_DATA_OFFSET_PKT;
+        sys_protocol_pkt_t filtered_data_pkt = {SYS_MANAGE_CMD_GET_FILTERED_PPG, (uint32_t)temp, 0xFF};
+        sys_protocol_send_pkt_to_port(filtered_data_pkt);
+      }
     }
+  }
+  if (cb_space_count(&s_ppg_signal.filtered_data) == 0)
+  {
+    cb_clear(&s_ppg_signal.filtered_data);
   }
 
   if (cb_data_count(&s_rx_pkt_cbuf) > 0)
