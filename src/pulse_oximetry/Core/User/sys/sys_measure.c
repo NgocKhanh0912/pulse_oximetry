@@ -304,14 +304,14 @@ static uint32_t sys_measure_peak_detector(sys_measure_t *signal)
 
   // Calculate the average peak interval (in second unit)
   heart_rate_avg = peak_index_buf[peak_nums - 1] - peak_index_buf[0];
-  heart_rate_avg /= (peak_nums - 1);
-  heart_rate_avg *= (1 / SYS_MEASURE_SAMPLING_RATE);
-  // Calibration
-  heart_rate_avg -= 0.0065;
-  // Estimate the heart rate (beats per minute unit)
-  heart_rate_avg = 60 / heart_rate_avg;
-  if (heart_rate_avg > 0)
+  if (peak_nums > 1)
   {
+    heart_rate_avg /= (peak_nums - 1);
+    heart_rate_avg *= (1 / SYS_MEASURE_SAMPLING_RATE);
+    // Calibration
+    heart_rate_avg -= 0.0065;
+    // Estimate the heart rate (beats per minute unit)
+    heart_rate_avg = 60 / heart_rate_avg;
     signal->heart_rate = (uint32_t)heart_rate_avg;
   }
   return SYS_MEASURE_OK;
