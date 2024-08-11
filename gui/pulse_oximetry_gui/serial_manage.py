@@ -18,7 +18,7 @@ class serial_manage(QtCore.QObject):
         self.port = port
         self.baudrate = baudrate
         self.running = False
-        self.thread = threading.Thread(target=self.run)
+        self.thread = threading.Thread(target=self.run, daemon=True)
         self.serial_connection = None
 
     def start(self):

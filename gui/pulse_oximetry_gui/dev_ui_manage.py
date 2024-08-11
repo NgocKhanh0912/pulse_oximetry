@@ -35,7 +35,6 @@ class Widget(QtWidgets.QWidget):
         calendar_layout.addWidget(self.ui_dev.calendar_widget)
 
         styles = {"color": "black", "font-size": "12px"}
-        self.ppg_pen = pg.mkPen(color=(0, 0, 255))  # Blue
 
         # Add the plot widget raw_ppg to the layout in dev.ui
         self.raw_ppg_graph = pg.PlotWidget()
@@ -47,6 +46,7 @@ class Widget(QtWidgets.QWidget):
         self.raw_ppg_graph.setLabel("bottom", "Time (s)", **styles)
         self.raw_ppg_value = []
         self.raw_ppg_time = []
+        self.raw_ppg_pen = pg.mkPen(color=(255, 0, 255)) # Pink
 
         # Add the plot widget filtered_ppg to the layout in dev.ui
         self.filtered_ppg_graph = pg.PlotWidget()
@@ -58,6 +58,7 @@ class Widget(QtWidgets.QWidget):
         self.filtered_ppg_graph.setLabel("bottom", "Time (s)", **styles)
         self.filtered_ppg_value = []
         self.filtered_ppg_time = []
+        self.filtered_ppg_pen = pg.mkPen(color=(0, 0, 255)) # Blue
 
     @Slot()
     def show_user_ui(self):

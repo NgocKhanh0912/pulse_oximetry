@@ -10,6 +10,7 @@
 
 import sys
 import serial
+import threading
 import serial.tools.list_ports
 import pyqtgraph as pg
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QMessageBox, QVBoxLayout, QWidget
@@ -51,6 +52,10 @@ class MainWindow(QMainWindow):
         self.store_base_info(self)
         # Set the window to maximized
         self.showMaximized()
+
+        # Thread
+        self.thread_plot_raw_ppg_graph = threading.Thread(target=self.update_raw_ppg_graph, daemon=True)
+        self.thread_plot_filtered_ppg_graph = threading.Thread(target=self.update_filtered_ppg_graph, daemon=True)
 
         # Initialize serial communication
         self.ui_user.cbb_baudrate.setCurrentText("115200")
@@ -98,6 +103,7 @@ class MainWindow(QMainWindow):
         self.minute = []
         self.second = []
         self.records = []
+        self.data_value = 0
 
         # PlotDataItem for lines
         # self.heart_rate_pen = pg.mkPen(color=(0, 0, 255))
@@ -108,6 +114,9 @@ class MainWindow(QMainWindow):
         self.port_check_timer = QTimer(self)
         self.port_check_timer.timeout.connect(self.update_available_ports)
         self.port_check_timer.start(1000)  # Check every 1000 ms (1 second)
+
+        self.thread_plot_raw_ppg_graph.start()
+        self.thread_plot_filtered_ppg_graph.start()
 
     def store_base_info(self, widget):
         for child in widget.findChildren(QWidget):
@@ -447,7 +456,7 @@ class MainWindow(QMainWindow):
             cmd = packet[2:4]
             data_reverse = packet[4:12]
             data = ''.join(reversed([data_reverse[i:i+2] for i in range(0, len(data_reverse), 2)]))
-            data_value = int(data, 16)
+            self.data_value = int(data, 16)
             threshold = packet[12:14]
 
             if not (threshold in ["FF", "0F", "F0"]):
@@ -476,15 +485,15 @@ class MainWindow(QMainWindow):
 
             # Plot heart rate
             elif cmd == "01":
-                self.update_heart_rate(data_value)
+                self.update_heart_rate()
 
             # Plot raw PPG signal
             elif cmd == "11":
-                self.update_ppg_graph(self.dev_widget.raw_ppg_time, self.dev_widget.raw_ppg_value, data_value, self.dev_widget.raw_ppg_graph)
+                self.update_raw_ppg_graph()
 
             # Plot filtered PPG signal
             elif cmd == "21":
-                self.update_ppg_graph(self.dev_widget.filtered_ppg_time, self.dev_widget.filtered_ppg_value, data_value, self.dev_widget.filtered_ppg_graph)
+                self.update_filtered_ppg_graph()
 
             # Error notification
             elif cmd == "06":
@@ -511,14 +520,17 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", f"Failed to read serial data: {str(e)}")
 
     @Slot()
-    def update_heart_rate(self, data_value):
+    def update_heart_rate(self):
+        if not self.serial_connection:
+            return
+
         if (len(self.hour) >= 1) and (len(self.minute) >= 1) and (len(self.second) >= 1):
             time_in_hours = self.hour[-1] + self.minute[-1] / 60 + self.second[-1] / 3600
         else:
             time_in_hours = 0
 
         self.heart_rate_time.append(time_in_hours)
-        self.heart_rate_value.append(data_value)
+        self.heart_rate_value.append(self.data_value)
 
         if (len(self.day) >= 2) and (len(self.month)) >= 2 and (len(self.year)) >= 2:
             if (self.day[-1] != self.day[-2]) or (self.month[-1] != self.month[-2]) or (self.year[-1] != self.year[-2]):
@@ -544,23 +556,46 @@ class MainWindow(QMainWindow):
         heart_rate_graph_title = f"Heart Rate Graph in {self.day[-1]:02}/{self.month[-1]:02}/{self.year[-1]:04}"
         self.heart_rate_graph.setTitle(heart_rate_graph_title, color="black", size="10pt")
 
-    @Slot()
-    def update_ppg_graph(self, time_list, value_list, new_value, graph_widget):
-        if time_list:
-            new_time = time_list[-1] + 0.01
-        else:
-            new_time = 0
+    def update_raw_ppg_graph(self):
+        if not self.serial_connection:
+            return
 
-        time_list.append(new_time)
-        value_list.append(new_value)
+        if self.dev_widget.raw_ppg_time:
+            raw_ppg_new_time = self.dev_widget.raw_ppg_time[-1] + 0.01
+        else:
+            raw_ppg_new_time = 0
+
+        self.dev_widget.raw_ppg_time.append(raw_ppg_new_time)
+        self.dev_widget.raw_ppg_value.append(self.data_value)
 
         # Keep only the last 500 samples
-        if len(time_list) > 500:
-            time_list.pop(0)
-            value_list.pop(0)
+        if len(self.dev_widget.raw_ppg_time) > 500:
+            self.dev_widget.raw_ppg_time.pop(0)
+            self.dev_widget.raw_ppg_value.pop(0)
 
-        graph_widget.plot(time_list, value_list, pen=self.dev_widget.ppg_pen, clear=True)
-        graph_widget.autoRange()
+        self.dev_widget.raw_ppg_graph.plot(self.dev_widget.raw_ppg_time, self.dev_widget.raw_ppg_value, pen=self.dev_widget.raw_ppg_pen, clear=True)
+        self.dev_widget.raw_ppg_graph.autoRange()
+
+    def update_filtered_ppg_graph(self):
+        if not self.serial_connection:
+            return
+
+        self.data_value = self.data_value - 1000
+        if self.dev_widget.filtered_ppg_time:
+            filtered_ppg_new_time = self.dev_widget.filtered_ppg_time[-1] + 0.01
+        else:
+            filtered_ppg_new_time = 0
+
+        self.dev_widget.filtered_ppg_time.append(filtered_ppg_new_time)
+        self.dev_widget.filtered_ppg_value.append(self.data_value)
+
+        # Keep only the last 500 samples
+        if len(self.dev_widget.filtered_ppg_time) > 500:
+            self.dev_widget.filtered_ppg_time.pop(0)
+            self.dev_widget.filtered_ppg_value.pop(0)
+
+        self.dev_widget.filtered_ppg_graph.plot(self.dev_widget.filtered_ppg_time, self.dev_widget.filtered_ppg_value, pen=self.dev_widget.filtered_ppg_pen, clear=True)
+        self.dev_widget.filtered_ppg_graph.autoRange()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
