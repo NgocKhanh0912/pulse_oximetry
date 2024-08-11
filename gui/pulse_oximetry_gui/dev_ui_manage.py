@@ -34,19 +34,17 @@ class Widget(QtWidgets.QWidget):
         calendar_layout = QVBoxLayout(self.ui_dev.Calendar)
         calendar_layout.addWidget(self.ui_dev.calendar_widget)
 
+        styles = {"color": "black", "font-size": "12px"}
+        self.ppg_pen = pg.mkPen(color=(0, 0, 255))  # Blue
+
         # Add the plot widget raw_ppg to the layout in dev.ui
         self.raw_ppg_graph = pg.PlotWidget()
         raw_ppg_layout = QVBoxLayout(self.ui_dev.Raw_PPG)
         raw_ppg_layout.addWidget(self.raw_ppg_graph)
-
         self.raw_ppg_graph.setBackground("w")
         self.raw_ppg_graph.setTitle("Raw PPG signal", color="black", size="10pt")
-
-        styles = {"color": "black", "font-size": "12px"}
         self.raw_ppg_graph.setLabel("left", "PPG", **styles)
         self.raw_ppg_graph.setLabel("bottom", "Time (s)", **styles)
-
-        self.raw_ppg_pen = pg.mkPen(color=(0, 0, 255))  # Blue
         self.raw_ppg_value = []
         self.raw_ppg_time = []
 
@@ -54,14 +52,10 @@ class Widget(QtWidgets.QWidget):
         self.filtered_ppg_graph = pg.PlotWidget()
         filtered_ppg_layout = QVBoxLayout(self.ui_dev.Filtered_PPG)
         filtered_ppg_layout.addWidget(self.filtered_ppg_graph)
-
         self.filtered_ppg_graph.setBackground("w")
         self.filtered_ppg_graph.setTitle("Filtered PPG signal", color="black", size="10pt")
-
         self.filtered_ppg_graph.setLabel("left", "PPG", **styles)
         self.filtered_ppg_graph.setLabel("bottom", "Time (s)", **styles)
-
-        self.filtered_ppg_pen = pg.mkPen(color=(0, 255, 0))  # Green
         self.filtered_ppg_value = []
         self.filtered_ppg_time = []
 

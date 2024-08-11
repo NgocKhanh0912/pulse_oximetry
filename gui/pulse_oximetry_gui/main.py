@@ -476,76 +476,15 @@ class MainWindow(QMainWindow):
 
             # Plot heart rate
             elif cmd == "01":
-                if (len(self.hour) >= 1) and (len(self.minute) >= 1) and (len(self.second) >= 1):
-                    time_in_hours = self.hour[-1] + self.minute[-1] / 60 + self.second[-1] / 3600
-                else:
-                    time_in_hours = 0
-
-                if (len(self.heart_rate_time) == 0):
-                    self.heart_rate_time.append(0)
-
-                self.heart_rate_time.append(time_in_hours)
-                self.heart_rate_value.append(data_value)
-
-                if (len(self.day) >= 2) and (len(self.month)) >= 2 and (len(self.year)) >= 2:
-                    if (self.day[-1] != self.day[-2]) or (self.month[-1] != self.month[-2]) or (self.year[-1] != self.year[-2]):
-                        self.clear_heart_rate_graph()
-                        # Clear old data
-                        self.heart_rate_time = self.heart_rate_time[-1:]
-                        self.heart_rate_value = self.heart_rate_value[-1:]
-
-                # Update the PlotDataItem
-                # self.heart_rate_plot_lines.setData(self.heart_rate_time, self.heart_rate_value)
-
-                # Update the ScatterPlotItem
-                self.heart_rate_scatter.setData(self.heart_rate_time, self.heart_rate_value)
-
-                # Print the records from the arrays
-                record = f"{self.day[-1]:02}/{self.month[-1]:02}/{self.year[-1]:04} {self.hour[-1]:02}:{self.minute[-1]:02}:{self.second[-1]:02} Heart rate: {self.heart_rate_value[-1]} bpm"
-                self.records.append(record)
-
-                # Join records with newline characters and print to txt_record
-                records_text = "\n".join(self.records)
-                self.ui_user.txt_record.setPlainText(records_text)
-
-                heart_rate_graph_title = f"Heart Rate Graph in {self.day[-1]:02}/{self.month[-1]:02}/{self.year[-1]:04}"
-                self.heart_rate_graph.setTitle(heart_rate_graph_title, color="black", size="10pt")
+                self.update_heart_rate(data_value)
 
             # Plot raw PPG signal
             elif cmd == "11":
-                if self.dev_widget.raw_ppg_time:
-                    raw_ppg_new_time = self.dev_widget.raw_ppg_time[-1] + 0.01
-                else:
-                    raw_ppg_new_time = 0
-
-                self.dev_widget.raw_ppg_time.append(raw_ppg_new_time)
-                self.dev_widget.raw_ppg_value.append(data_value)
-
-                # Keep only the last 500 samples
-                if len(self.dev_widget.raw_ppg_time) > 500:
-                    self.dev_widget.raw_ppg_time = self.dev_widget.raw_ppg_time[-500:]
-                    self.dev_widget.raw_ppg_time = self.dev_widget.raw_ppg_time[-500:]
-
-                self.dev_widget.raw_ppg_graph.plot(self.dev_widget.raw_ppg_time, self.dev_widget.raw_ppg_value, pen=self.dev_widget.raw_ppg_pen, clear=True)
-                self.dev_widget.raw_ppg_graph.autoRange()
+                self.update_ppg_graph(self.dev_widget.raw_ppg_time, self.dev_widget.raw_ppg_value, data_value, self.dev_widget.raw_ppg_graph)
 
             # Plot filtered PPG signal
             elif cmd == "21":
-                if self.dev_widget.filtered_ppg_time:
-                    filtered_ppg_new_time = self.dev_widget.filtered_ppg_time[-1] + 0.01
-                else:
-                    filtered_ppg_new_time = 0
-
-                self.dev_widget.filtered_ppg_time.append(filtered_ppg_new_time)
-                self.dev_widget.filtered_ppg_value.append(data_value)
-
-                # Keep only the last 500 samples
-                if len(self.dev_widget.filtered_ppg_time) > 500:
-                    self.dev_widget.filtered_ppg_time = self.dev_widget.filtered_ppg_time[-500:]
-                    self.dev_widget.filtered_ppg_time = self.dev_widget.filtered_ppg_time[-500:]
-
-                self.dev_widget.filtered_ppg_graph.plot(self.dev_widget.filtered_ppg_time, self.dev_widget.filtered_ppg_value, pen=self.dev_widget.filtered_ppg_pen, clear=True)
-                self.dev_widget.filtered_ppg_graph.autoRange()
+                self.update_ppg_graph(self.dev_widget.filtered_ppg_time, self.dev_widget.filtered_ppg_value, data_value, self.dev_widget.filtered_ppg_graph)
 
             # Error notification
             elif cmd == "06":
@@ -570,6 +509,61 @@ class MainWindow(QMainWindow):
             
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to read serial data: {str(e)}")
+
+    @Slot()
+    def update_heart_rate(self, data_value):
+        if (len(self.hour) >= 1) and (len(self.minute) >= 1) and (len(self.second) >= 1):
+            time_in_hours = self.hour[-1] + self.minute[-1] / 60 + self.second[-1] / 3600
+        else:
+            time_in_hours = 0
+
+        if (len(self.heart_rate_time) == 0):
+            self.heart_rate_time.append(0)
+
+        self.heart_rate_time.append(time_in_hours)
+        self.heart_rate_value.append(data_value)
+
+        if (len(self.day) >= 2) and (len(self.month)) >= 2 and (len(self.year)) >= 2:
+            if (self.day[-1] != self.day[-2]) or (self.month[-1] != self.month[-2]) or (self.year[-1] != self.year[-2]):
+                self.clear_heart_rate_graph()
+                # Clear old data
+                self.heart_rate_time = self.heart_rate_time[-1:]
+                self.heart_rate_value = self.heart_rate_value[-1:]
+
+        # Update the PlotDataItem
+        # self.heart_rate_plot_lines.setData(self.heart_rate_time, self.heart_rate_value)
+
+        # Update the ScatterPlotItem
+        self.heart_rate_scatter.setData(self.heart_rate_time, self.heart_rate_value)
+
+        # Print the records from the arrays
+        record = f"{self.day[-1]:02}/{self.month[-1]:02}/{self.year[-1]:04} {self.hour[-1]:02}:{self.minute[-1]:02}:{self.second[-1]:02} Heart rate: {self.heart_rate_value[-1]} bpm"
+        self.records.append(record)
+
+        # Join records with newline characters and print to txt_record
+        records_text = "\n".join(self.records)
+        self.ui_user.txt_record.setPlainText(records_text)
+
+        heart_rate_graph_title = f"Heart Rate Graph in {self.day[-1]:02}/{self.month[-1]:02}/{self.year[-1]:04}"
+        self.heart_rate_graph.setTitle(heart_rate_graph_title, color="black", size="10pt")
+
+    @Slot()
+    def update_ppg_graph(self, time_list, value_list, new_value, graph_widget):
+        if time_list:
+            new_time = time_list[-1] + 0.01
+        else:
+            new_time = 0
+
+        time_list.append(new_time)
+        value_list.append(new_value)
+
+        # Keep only the last 500 samples
+        if len(time_list) > 500:
+            time_list.pop(0)
+            value_list.pop(0)
+
+        graph_widget.plot(time_list, value_list, pen=self.dev_widget.ppg_pen, clear=True)
+        graph_widget.autoRange()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
