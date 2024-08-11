@@ -176,23 +176,23 @@ sys_button_status_t sys_button_manage()
 
   case SYS_BUTTON_FSM_STATE_SINGLE_CLICK:
   {
-    s_button.fsm_state = SYS_BUTTON_FSM_STATE_IDLE;
     __CALLBACK(s_button_evt_cb[SYS_BUTTON_EVT_SINGLE_CLICK_CB]);
+    s_button.fsm_state = SYS_BUTTON_FSM_STATE_IDLE;
     break;
   }
 
   case SYS_BUTTON_FSM_STATE_DOUBLE_CLICK:
   {
-    s_button.fsm_state = SYS_BUTTON_FSM_STATE_IDLE;
     __CALLBACK(s_button_evt_cb[SYS_BUTTON_EVT_DOUBLE_CLICK_CB]);
+    s_button.fsm_state = SYS_BUTTON_FSM_STATE_IDLE;
     break;
   }
 
   case SYS_BUTTON_FSM_STATE_HOLD:
   {
+    __CALLBACK(s_button_evt_cb[SYS_BUTTON_EVT_HOLD_CB]);
     s_button.fsm_state = SYS_BUTTON_FSM_STATE_WAIT_RELEASE;
     s_button.dbutton.time_change = bsp_utils_get_tick();
-    __CALLBACK(s_button_evt_cb[SYS_BUTTON_EVT_HOLD_CB]);
     break;
   }
 
