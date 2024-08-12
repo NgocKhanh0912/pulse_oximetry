@@ -594,10 +594,14 @@ class MainWindow(QMainWindow):
 
     Slot()
     def update_ppg_graph(self):
-        if (len(self.dev_widget.raw_ppg_value) != 0) or (len(self.dev_widget.filtered_ppg_value) != 0):
-            self.ppg_graph_index += 1
-            self.update_raw_ppg_graph()
-            self.update_filtered_ppg_graph()
+        if (len(self.dev_widget.raw_ppg_value) != 0) and (len(self.dev_widget.filtered_ppg_value) != 0):
+            if (len(self.dev_widget.raw_ppg_value) > self.ppg_graph_index) and (len(self.dev_widget.filtered_ppg_value) > self.ppg_graph_index):
+                self.ppg_graph_index += 1
+                self.update_raw_ppg_graph()
+                self.update_filtered_ppg_graph()
+            else:
+                self.update_raw_ppg_graph()
+                self.update_filtered_ppg_graph()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
