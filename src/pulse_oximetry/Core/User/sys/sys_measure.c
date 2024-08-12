@@ -84,7 +84,7 @@ uint32_t sys_measure_process_data(sys_measure_t *signal)
 
   sys_measure_filter_data(signal);
 
-  if (cb_space_count(&(signal->filtered_data)) == 0)
+  if (cb_space_count(&signal->filtered_data) == 0)
   {
     sys_measure_peak_detector(signal);
   }
@@ -203,8 +203,8 @@ static uint32_t sys_measure_peak_detector(sys_measure_t *signal)
   double mean_of_signal = 0;
   int i, j;
   double handle_data[SYS_MEASURE_MAX_SAMPLES_PROCESS] = {0};
-  cbuffer_t peak_cbuf = signal->filtered_data;
-  cb_read(&peak_cbuf, handle_data, sizeof(handle_data));
+  cbuffer_t peak_detector_cbuf = signal->filtered_data;
+  cb_read(&peak_detector_cbuf, handle_data, sizeof(handle_data));
 
   // Enhance the signal
   for (i = 0; i < SYS_MEASURE_MAX_SAMPLES_PROCESS; i++)
